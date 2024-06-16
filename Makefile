@@ -72,7 +72,7 @@ install-%-el:
 	$(if $<, install -m755 -d $(DESTDIR)$(ELDIR))
 	$(if $<, install -m644 $^ $(DESTDIR)$(ELDIR))
 
-install-async-el: $(ELC) async-autoloads.el
+install-async-el: $(filter-out async-test.el%,$(ELC)) async-autoloads.el
 
 install: install-async-el
 
