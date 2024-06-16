@@ -34,15 +34,20 @@ PKGDIR := .
 LOADPATH	:= -L .
 
 # Files to compile
-EL			:= $(sort $(wildcard *async*.el))
+EL			:= $(sort $(filter-out async-autoloads.el, $(wildcard *async*.el)))
 
 # Compiled files
 ELC			:= $(EL:.el=.elc)
 
+DESTDIR ?=
+PREFIX ?= /usr
+DATADIR ?= $(PREFIX)/share
+ELDIR = $(DATADIR)/emacs/site-lisp
 
-.PHONY: clean autoloads batch-compile install uninstall
 
-all: clean autoloads batch-compile
+.PHONY: clean batch-compile install uninstall
+
+all: batch-compile
 
 $(ELC): %.elc: %.el
 	$(EMACS) $(LOADPATH) -f batch-byte-compile $<
@@ -51,7 +56,7 @@ $(ELC): %.elc: %.el
 compile: $(ELC)
 
 # Compile all files at once
-batch-compile:
+batch-compile: async-autoloads.el
 	$(EMACS) $(LOADPATH) -f batch-byte-compile $(EL)
 
 # Remove all generated files
@@ -59,17 +64,17 @@ clean:
 	rm -f $(ELC)
 
 # Make autoloads file
-autoloads:
+async-autoloads.el: $(EL)
 	$(EVAL) "(progn (setq generated-autoload-file (expand-file-name \"async-autoloads.el\" \"$(PKGDIR)\")) \
 (setq backup-inhibited t) (update-directory-autoloads \"$(PKGDIR)\"))"
 
-PREFIX=/usr/local/share/
-DESTDIR=${PREFIX}emacs/site-lisp/emacs-async/
-install:
-	test -d ${DESTDIR} || mkdir ${DESTDIR}
-	cp -vf *.el $(DESTDIR)
-	cp -vf *.elc $(DESTDIR)
-	cp -vf async-autoloads.el $(DESTDIR)
+install-%-el:
+	$(if $<, install -m755 -d $(DESTDIR)$(ELDIR))
+	$(if $<, install -m644 $^ $(DESTDIR)$(ELDIR))
+
+install-async-el: $(ELC) async-autoloads.el
+
+install: install-async-el
 
 uninstall:
 	rm -vf ${DESTDIR}*.elc
